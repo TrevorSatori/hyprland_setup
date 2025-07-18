@@ -1,0 +1,11 @@
+[opener]
+video = [
+  { run = "vlc \"$@\"", desc = "VLC Video Player", block = true, for = "unix" },
+]
+
+[open]
+rules = [
+  { mime = "video/*", use = "video" },
+  # ... add other rules as needed
+]
+

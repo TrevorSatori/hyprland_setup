@@ -1,0 +1,204 @@
+- name: Full Arch Setup with paru, hyprland, packages, etc
+  hosts: localhost
+  connection: local
+  become: true
+  vars:
+    user_name: satori
+    user_home: "/home/satori"
+    aur_packages:
+      - cursor-bin
+      - hyprshot
+      - ttf-ms-fonts
+      - ttf-courier-prime
+      - brave-bin
+      - zen-browser-bin
+      - mullvad-vpn-bin
+      - hoppscotch-bin
+
+  tasks:
+
+      # Move all contents from config_files to .config
+    - name: Move all config files and directories to the .config directory
+      copy:
+        src: "{{ user_home }}/hyprland_dotfiles/config_files/"
+        dest: "{{ user_home }}/.config/"
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0755'
+        recurse: yes
+
+      # Move all .zsh* files to the home directory
+    - name: Move all .zsh files to the home directory
+      find:
+        paths: "{{ user_home }}/hyprland_dotfiles"
+        patterns: ".zsh*"
+      register: zsh_files
+
+    - name: Copy all found .zsh files to the home directory
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ user_home }}/{{ item.path | basename }}"
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0644'
+      with_items: "{{ zsh_files.files }}"
+      when: zsh_files.matched > 0
+
+    - name: Ensure the gtk-4.0 directory exists in .config
+      file:
+        path: "{{ user_home }}/.config/gtk-4.0"
+        state: directory
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0755'
+
+    - name: Copy all themes from hyprland_dotfiles to .config
+      copy:
+        src: "{{ user_home }}/hyprland_dotfiles/themes/gtk-4.0/"
+        dest: "{{ user_home }}/.config/gtk-4.0/"
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0755'
+        recurse: yes
+      become: false
+      become_user: "{{ user_name }}"
+
+
+    - name: Install essential packages
+      pacman:
+        name:
+          - btrfs-progs # fs
+          - exfatprogs  # fs
+          - dosfstools  # fs
+          - nwg-look    # apply-themes
+          - docker
+          - docker-compose
+          - gvfs        # GUI usb stick
+          - tmux 
+          - ripgrep
+          - nodejs
+          - npm
+          - kitty
+          - thunar
+          - awesome-terminal-fonts
+          - otf-font-awesome
+          - ttf-font-awesome
+          - ttf-jetbrains-mono
+          - ttf-jetbrains-mono-nerd 
+          - starship
+          - base-devel
+          - git
+          - neovim
+          - less
+          - curl
+          - wget
+          - zsh
+          - sudo
+          - steam
+          - networkmanager
+          - rustup
+          - network-manager-applet
+          - fastfetch
+          - imagemagick # Display images in terminal (maybe not needed)
+          - w3m         # maybe not needed
+          - foliate  # Book Reading app
+          - qbittorrent # Linux download app
+          - vlc
+          - swaync # notification center
+          - yazi # terminal file manager
+          - hyprland # WM Setup
+          - hyprlock # Lock Screen
+          - hypridle
+          - swww     # WM wallpaper
+          - waybar   # WM Status Bar
+          - wl-clipboard # System clipboard
+          - hyprshot # Wrapper for screenshot logic
+          - slurp    # select area of screenshot
+          - jq       # parse and manipulate json
+          - grim     # Takes screenshot
+          - languagetool # Spelling & Grammar
+          - xdg-desktop-portal 
+          - xdg-desktop-portal-wlr 
+          - qt5-wayland 
+          - qt5ct
+          - rofi-wayland
+          - spotify-launcher
+          - gnome-disk-utility
+          - polkit-gnome # Used for disks flashing
+          - zsh-autosuggestions
+          - zsh-syntax-highlighting
+        state: present
+
+    - name: Set Zsh as the default shell for user
+      user:
+        name: "{{ user_name }}"
+        shell: /bin/zsh
+
+    - name: Set Rust default to stable
+      become: false
+      become_user: "{{ user_name }}"
+      shell: rustup default stable
+      environment:
+        PATH: "/home/{{ user_name }}/.cargo/bin:{{ ansible_env.PATH }}"
+
+    - name: Enable and start Docker service
+      become: true
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add current user to docker group
+      become: true
+      ansible.builtin.user:
+        name: "{{ ansible_user_id }}"
+        groups: docker
+        append: yes
+
+    - name: Add safe directory for paru repository
+      become: false
+      become_user: "{{ user_name }}"
+      shell: git config --global --add safe.directory /home/{{ user_name }}/paru
+
+      # Ensure paru directory exists and has correct permissions
+    - name: Ensure paru directory exists and has correct permissions
+      file:
+        path: "{{ user_home }}/paru"
+        state: directory
+        mode: '0755'
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+
+    # Ensure .git/FETCH_HEAD is writable by the user
+    - name: Ensure .git/FETCH_HEAD is writable by the user
+      file:
+        path: "{{ user_home }}/paru/.git/FETCH_HEAD"
+        state: touch
+        owner: "{{ user_name }}"
+        group: "{{ user_name }}"
+        mode: '0644'
+      when: ansible_facts['os_family'] == 'Linux'
+
+
+    - name: Clone paru from AUR
+      become: false
+      become_user: "{{ user_name }}"
+      git:
+        repo: https://aur.archlinux.org/paru.git
+        dest: "{{ user_home }}/paru"
+        clone: yes
+
+    - name: Build and install paru
+      become: false
+      become_user: "{{ user_name }}"
+      shell: makepkg -si --noconfirm
+      args:
+        chdir: "{{ user_home }}/paru"
+        creates: "{{ user_home }}/.local/bin/paru"
+
+    - name: Install AUR packages using paru
+      become: false
+      become_user: "{{ user_name }}"
+      shell: paru -S --noconfirm --needed {{ item }}
+      loop: "{{ aur_packages }}"
+
