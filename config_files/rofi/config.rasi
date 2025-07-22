@@ -8,8 +8,5 @@ configuration{
     hide-scrollbar: true;
 
 }
-//@theme "~/.config/rofi/menu.rasi"
+@theme "~/.config/rofi/menu.rasi"
 
-//@theme "/usr/share/rofi/themes/DarkBlue.rasi"
-
-@theme "/usr/share/rofi/themes/menu.rasi"

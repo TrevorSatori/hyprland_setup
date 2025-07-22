@@ -13,6 +13,7 @@
       - brave-bin
       - zen-browser-bin
       - mullvad-vpn-bin
+      - tmux-plugin-manager
       - hoppscotch-bin
 
   tasks:
@@ -85,6 +86,7 @@
           - ttf-font-awesome
           - ttf-jetbrains-mono
           - ttf-jetbrains-mono-nerd 
+          - nerd-fonts
           - starship
           - base-devel
           - git

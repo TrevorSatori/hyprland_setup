@@ -9,14 +9,14 @@ theme='powermenu'
 uptime="`uptime -p | sed -e 's/up //g'`"
 host=`hostname`
 
-# Options (Emoji versions)
-shutdown='⏻'     # Power symbol
-reboot='🔄'       # Clockwise arrow
-lock='🔒'         # Locked padlock
-suspend='🌙'      # Crescent moon
-logout='🚪'       # Door (symbolizing exit)
-yes='✅'          # Checkmark
-no='❌'           # Cross mark
+# Options
+shutdown=''
+reboot=''
+lock=''
+suspend=''
+logout=''
+yes=''
+no=''
 
 # Rofi CMD
 rofi_cmd() {
